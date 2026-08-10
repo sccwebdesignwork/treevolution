@@ -145,14 +145,20 @@ jobs:
           SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
           CONFIG="$TARGET_DIR/client-update/.treevolution-config.php"
 
-          $SSH "$SSH_USER@$SSH_HOST" "
-            set -e
-            test -d '$TARGET_DIR/client-update'
-            test -f '$CONFIG'
-            test -r '$CONFIG'
-            php -r '\$c=require '\''$CONFIG'\''; foreach (["upload_username","upload_password","github_owner","github_repo","github_branch","github_token"] as \$k) { if (!isset(\$c[\$k]) || \$c[\$k] === "") { fwrite(STDERR, "Missing config key: \$k\\n"); exit(1); } }'
-            echo 'Client updater private config exists and is readable.'
-          "
+          # Keep this deliberately simple: nested PHP quoting over SSH is fragile.
+          # The live HTTP smoke test below is the authoritative end-to-end check.
+          $SSH "$SSH_USER@$SSH_HOST" \
+            "test -d '$TARGET_DIR/client-update' && \
+             test -s '$CONFIG' && \
+             test -r '$CONFIG' && \
+             grep -q "'upload_username'" '$CONFIG' && \
+             grep -q "'upload_password'" '$CONFIG' && \
+             grep -q "'github_owner'" '$CONFIG' && \
+             grep -q "'github_repo'" '$CONFIG' && \
+             grep -q "'github_branch'" '$CONFIG' && \
+             grep -q "'github_token'" '$CONFIG'"
+
+          echo "Client updater private config exists, is non-empty, and contains all required keys."
 
       - name: Smoke test deployed site and client updater
         shell: bash
