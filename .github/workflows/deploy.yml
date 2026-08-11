@@ -38,7 +38,7 @@ jobs:
             index.html privacy/index.html cookies/index.html accessibility/index.html terms/index.html
             about/index.html services/index.html our-work/index.html reviews/index.html areas/index.html contact/index.html
             404.html robots.txt sitemap.xml .htaccess
-            assets/css/treevolution-v6-4.css assets/js/treevolution-v6-4.js
+            assets/css/treevolution-v6-4.css assets/css/client-update.css assets/js/treevolution-v6-4.js
             client-update/login.php client-update/index.php client-update/submit.php contact/send.php
           )
           for file in "${required[@]}"; do
@@ -112,14 +112,54 @@ jobs:
           PY
           chmod 600 /tmp/treevolution-private-config.php
 
-      - name: Add SSH host key
+      - name: Diagnose SSH reachability and add host key
         shell: bash
         run: |
           set -euo pipefail
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          : > ~/.ssh/known_hosts
+
+          echo "SSH target: ${SSH_HOST}:${SSH_PORT}"
+          echo "Runner public IP:"
+          curl --fail --silent --show-error --max-time 10 https://api.ipify.org || true
+          echo
+
+          echo "Testing TCP connectivity to SSH port..."
+          if timeout 15 bash -c "cat < /dev/null > /dev/tcp/${SSH_HOST}/${SSH_PORT}" 2>/dev/null; then
+            echo "TCP connection to ${SSH_HOST}:${SSH_PORT} succeeded."
+          else
+            echo "::warning::Initial TCP connection to ${SSH_HOST}:${SSH_PORT} did not succeed within 15 seconds."
+          fi
+
+          echo "Collecting SSH host key with retries..."
+          keyscan_ok=0
+          for attempt in 1 2 3; do
+            echo "ssh-keyscan attempt ${attempt}/3..."
+            if timeout 40 ssh-keyscan -T 30 -p "$SSH_PORT" -H "$SSH_HOST" > /tmp/treevolution-known-hosts 2>/tmp/treevolution-keyscan.err; then
+              if [ -s /tmp/treevolution-known-hosts ]; then
+                cat /tmp/treevolution-known-hosts >> ~/.ssh/known_hosts
+                keyscan_ok=1
+                break
+              fi
+            fi
+
+            echo "Attempt ${attempt} returned no host key."
+            if [ -s /tmp/treevolution-keyscan.err ]; then
+              sed 's/^/ssh-keyscan: /' /tmp/treevolution-keyscan.err
+            fi
+            sleep 5
+          done
+
+          if [ "$keyscan_ok" -ne 1 ]; then
+            echo "::error::GitHub Actions could not obtain an SSH host key from ${SSH_HOST}:${SSH_PORT} after 3 attempts."
+            echo "::error::This is a network/reachability failure before username or password authentication."
+            exit 1
+          fi
+
           chmod 600 ~/.ssh/known_hosts
+          echo "SSH host key collected successfully."
 
       - name: Deploy website to Hostinger test directory
         shell: bash
@@ -185,6 +225,6 @@ jobs:
             echo 'Client updater configuration was not found by the live PHP application.'
             exit 1
           fi
-          grep -q 'Treevolution client update' /tmp/treevolution-client.html
+          grep -q 'Welcome back' /tmp/treevolution-client.html
           grep -q 'Sign in' /tmp/treevolution-client.html
           echo "Deployment and client updater smoke tests passed."
