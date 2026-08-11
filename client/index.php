@@ -14,7 +14,7 @@ auth_required();
 <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="../assets/css/treevolution-v6-4.css">
+<link rel="stylesheet" href="../assets/css/treevolution-v7.css">
 <link rel="stylesheet" href="../assets/css/client-portal.css">
 </head>
 <body class="portal-body">
