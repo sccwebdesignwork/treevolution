@@ -1,0 +1,12 @@
+Treevolution V6.5 replacement files
+
+Fixes
+- client-update/submit.php: PHP 7.4 compatible 404 handling; upload 1-4 photographs; stores images[] while retaining image for backwards compatibility.
+- client-update/index.php: multi-photo selector and previews.
+- assets/js/treevolution-v6-4.js: renders multi-photo client stories.
+- assets/css/client-update.css: multi-photo preview styles.
+
+Gallery
+- our-work/index.html: new Working archive gallery.
+- assets/css/treevolution-v6-4.css: gallery and story-collage styles.
+- assets/img/gallery/: 12 optimised, semantically named WebP photographs.
