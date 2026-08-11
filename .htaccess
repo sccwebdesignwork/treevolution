@@ -1,5 +1,15 @@
 Options -Indexes
 DirectoryIndex index.html index.php
+
+# Never serve the generated Website Manager credentials/token file.
+<Files ".treevolution-config.php">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</Files>
 <IfModule mod_headers.c>
   Header set X-Robots-Tag "noindex, nofollow, noarchive"
   Header set X-Content-Type-Options "nosniff"

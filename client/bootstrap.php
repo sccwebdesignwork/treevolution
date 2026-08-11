@@ -13,7 +13,7 @@ session_start();
 $configPath = __DIR__ . '/.treevolution-config.php';
 if (!is_file($configPath)) {
     http_response_code(503);
-    exit('Client updater is not configured yet.');
+    exit('Website Manager is not configured yet.');
 }
 $config = require $configPath;
 
@@ -163,7 +163,7 @@ function optimise_image_to_webp(string $sourcePath, int $maxWidth = 1800, int $m
     return $output;
 }
 
-/* V6.6 project-management and SEO helpers */
+/* Project-management and SEO helpers */
 function story_key(array $story): string {
     if (!empty($story['id']) && preg_match('/^[a-zA-Z0-9_-]{6,80}$/', (string)$story['id'])) return (string)$story['id'];
     return substr(hash('sha256', (string)($story['date'] ?? '') . '|' . (string)($story['title'] ?? '') . '|' . (string)($story['image'] ?? '')), 0, 16);
@@ -227,7 +227,7 @@ function project_page_html(array $story): string {
     $canonical = 'https://treevolution.uk/our-work/projects/' . rawurlencode($slug) . '/';
     $meta = project_meta_description($story);
     $pageTitle = $title . ($location ? ' | ' . $location : '') . ' | Treevolution';
-    $imageUrl = !empty($images[0]) ? 'https://treevolution.uk/' . ltrim((string)$images[0], '/') : 'https://treevolution.uk/assets/img/treevolution-social-share.jpg';
+    $imageUrl = !empty($images[0]) ? 'https://treevolution.uk/' . ltrim((string)$images[0], '/') : 'https://treevolution.uk/assets/img/site/social-share.jpg';
     $imageMarkup = '';
     foreach ($images as $n => $img) {
         $src = '../../../' . ltrim((string)$img, '/');
@@ -259,11 +259,11 @@ function project_page_html(array $story): string {
         . '<meta name="robots" content="noindex,nofollow,noarchive">'
         . '<title>' . e($pageTitle) . '</title><meta name="description" content="' . e($meta) . '"><link rel="canonical" href="' . e($canonical) . '">'
         . '<meta property="og:type" content="article"><meta property="og:title" content="' . e($pageTitle) . '"><meta property="og:description" content="' . e($meta) . '"><meta property="og:url" content="' . e($canonical) . '"><meta property="og:image" content="' . e($imageUrl) . '">'
-        . '<meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#00b140"><link rel="icon" href="../../../favicon.ico"><link rel="stylesheet" href="../../../assets/css/treevolution-v6-4.css">'
+        . '<meta name="twitter:card" content="summary_large_image"><meta name="theme-color" content="#00b140"><link rel="icon" href="../../../favicon.ico"><link rel="stylesheet" href="../../../assets/css/site.css">'
         . '<script type="application/ld+json">' . json_encode($schema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) . '</script><script type="application/ld+json">' . json_encode($crumb, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) . '</script></head>'
         . '<body><a class="skip-link" href="#main">Skip to content</a><header class="site-header"><div class="shell nav-shell"><a class="brand" href="../../../" aria-label="Treevolution home"><img src="../../../assets/branding/treevolution-logo.svg" alt="Treevolution Professional Tree Care" width="260" height="74"></a><nav class="site-nav" aria-label="Primary"><a href="../../../">Home</a><a href="../../../services/">Services</a><a href="../../" aria-current="page">Our work</a><a href="../../../about/">About</a><a href="../../../reviews/">Reviews</a><a href="../../../areas/">Areas</a><a href="../../../contact/">Contact</a></nav></div></header>'
         . '<main id="main"><section class="page-hero"><div class="shell"><p class="kicker">' . e($category) . ($location ? ' · ' . e($location) : '') . '</p><h1>' . e($title) . '</h1><p class="lead">Completed ' . e($date) . ' by Treevolution.</p></div></section><section class="section"><div class="shell project-detail"><div class="project-story"><p>' . nl2br(e($body)) . '</p><p><a class="btn primary" href="../../../contact/">Request a free quote</a></p></div><div class="project-gallery">' . $imageMarkup . '</div></div></section></main>'
-        . '<footer class="site-footer"><div class="shell footer-bottom"><span>© <span data-year></span> Treevolution.</span><span><a href="../../">More Treevolution projects</a></span><span>Website created by <a href="https://sccwebdesign.co.uk/" target="_blank" rel="noopener">SCC Webdesign</a></span></div></footer><script src="../../../assets/js/treevolution-v6-4.js" defer></script></body></html>';
+        . '<footer class="site-footer"><div class="shell footer-bottom"><span>© <span data-year></span> Treevolution.</span><span><a href="../../">More Treevolution projects</a></span><span>Website created by <a href="https://sccwebdesign.co.uk/" target="_blank" rel="noopener">SCC Webdesign</a></span></div></footer><script src="../../../assets/js/site.js" defer></script></body></html>';
 }
 
 function update_sitemap_for_story(array $story, bool $remove = false): void {

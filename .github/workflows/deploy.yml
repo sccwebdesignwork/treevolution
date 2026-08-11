@@ -38,20 +38,40 @@ jobs:
             index.html privacy/index.html cookies/index.html accessibility/index.html terms/index.html
             about/index.html services/index.html our-work/index.html reviews/index.html areas/index.html contact/index.html
             404.html robots.txt sitemap.xml .htaccess
-            assets/css/treevolution-v6-4.css assets/css/client-update.css assets/js/treevolution-v6-4.js
-            client-update/login.php client-update/index.php client-update/submit.php contact/send.php
+            assets/css/site.css assets/css/client-portal.css assets/css/client-editor.css assets/js/site.js
+            client/login.php client/add.php client/manage.php client/submit.php client/bootstrap.php contact/send.php
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file"; exit 1; }
           done
-          ! grep -R --exclude-dir=.git -E 'github_pat_|ghp_[A-Za-z0-9]+' .
-          ! grep -R --exclude-dir=.git -E 'TREEVOLUTION_SSH_PASSWORD\s*[:=].+[^}]' . || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          roots = [p for p in Path('.').rglob('*') if p.is_file() and '.git' not in p.parts]
+          patterns = [
+              re.compile(('github' + '_pat_') + r'[A-Za-z0-9_]+'),
+              re.compile(('gh' + 'p_') + r'[A-Za-z0-9]+'),
+              re.compile(r'-----BEGIN (?:OPENSSH|RSA|EC|DSA) PRIVATE KEY-----'),
+          ]
+          hits = []
+          for path in roots:
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              for pattern in patterns:
+                  if pattern.search(text):
+                      hits.append(str(path))
+                      break
+          if hits:
+              raise SystemExit('Possible committed secret in: ' + ', '.join(hits))
+          PY
 
       - name: Validate PHP syntax
         shell: bash
         run: |
           set -euo pipefail
-          find client-update contact -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+          find client contact -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 
       - name: Validate deployment secrets and staging target
         shell: bash
@@ -81,7 +101,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq sshpass rsync
 
-      - name: Prepare client updater private config
+      - name: Prepare Website Manager private config
         shell: bash
         env:
           REPOSITORY: ${{ github.repository }}
@@ -169,26 +189,26 @@ jobs:
           SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
           RSYNC_SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
 
-          $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$TARGET_DIR' '$TARGET_DIR/client-update'"
+          $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$TARGET_DIR' '$TARGET_DIR/client'"
 
-          rsync -az --delete             --exclude '.git/'             --exclude '.github/'             --exclude 'docs/'             --exclude 'README.md'             --exclude 'AUDIT-NOTES.md'             --exclude 'client-update/config.example.php'             --exclude 'client-update/.treevolution-config.php'             -e "$RSYNC_SSH"             ./ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
+          rsync -az --delete             --exclude '.git/'             --exclude '.github/'             --exclude '.gitignore'             --exclude 'tools/'             --exclude 'README.md'             --exclude 'client/config.example.php'             --exclude 'client/.treevolution-config.php'             -e "$RSYNC_SSH"             ./ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
 
-          sshpass -e scp -P "$SSH_PORT" -o BatchMode=no             /tmp/treevolution-private-config.php             "$SSH_USER@$SSH_HOST:$TARGET_DIR/client-update/.treevolution-config.php"
+          sshpass -e scp -P "$SSH_PORT" -o BatchMode=no             /tmp/treevolution-private-config.php             "$SSH_USER@$SSH_HOST:$TARGET_DIR/client/.treevolution-config.php"
 
-          $SSH "$SSH_USER@$SSH_HOST"             "chmod 600 '$TARGET_DIR/client-update/.treevolution-config.php' && find '$TARGET_DIR' -type d -exec chmod 755 {} \; && find '$TARGET_DIR' -type f ! -name '.treevolution-config.php' -exec chmod 644 {} \;"
+          $SSH "$SSH_USER@$SSH_HOST"             "chmod 600 '$TARGET_DIR/client/.treevolution-config.php' && find '$TARGET_DIR' -type d -exec chmod 755 {} \; && find '$TARGET_DIR' -type f ! -name '.treevolution-config.php' -exec chmod 644 {} \;"
 
-      - name: Verify client updater private config on server
+      - name: Verify Website Manager private config on server
         shell: bash
         run: |
           set -euo pipefail
           export SSHPASS="$SSH_PASSWORD"
           SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
-          CONFIG="$TARGET_DIR/client-update/.treevolution-config.php"
+          CONFIG="$TARGET_DIR/client/.treevolution-config.php"
 
           # Keep this deliberately simple: nested PHP quoting over SSH is fragile.
           # The live HTTP smoke test below is the authoritative end-to-end check.
           $SSH "$SSH_USER@$SSH_HOST" \
-            "test -d '$TARGET_DIR/client-update' && \
+            "test -d '$TARGET_DIR/client' && \
              test -s '$CONFIG' && \
              test -r '$CONFIG' && \
              grep -q "'upload_username'" '$CONFIG' && \
@@ -198,33 +218,33 @@ jobs:
              grep -q "'github_branch'" '$CONFIG' && \
              grep -q "'github_token'" '$CONFIG'"
 
-          echo "Client updater private config exists, is non-empty, and contains all required keys."
+          echo "Website Manager private config exists, is non-empty, and contains all required keys."
 
-      - name: Smoke test deployed site and client updater
+      - name: Smoke test deployed site and Website Manager
         shell: bash
         env:
           DEPLOY_URL: ${{ vars.TREEVOLUTION_DEPLOY_URL }}
         run: |
           set -euo pipefail
           URL="${DEPLOY_URL:-https://treevolution.uk/test/}"
-          CLIENT_URL="${URL%/}/client-update/login.php"
+          CLIENT_URL="${URL%/}/client/login.php"
 
           echo "Checking $URL"
           curl --fail --silent --show-error --location --retry 3 --retry-delay 3 "$URL" > /tmp/treevolution-home.html
           grep -q '<title>Tree Surgeon Lewes & Sussex | Treevolution Professional Tree Care</title>' /tmp/treevolution-home.html
           curl --fail --silent --show-error --location "${URL%/}/privacy/" >/dev/null
 
-          echo "Checking client updater at $CLIENT_URL"
+          echo "Checking Website Manager at $CLIENT_URL"
           HTTP_CODE="$(curl --silent --show-error --location --retry 3 --retry-delay 3 -o /tmp/treevolution-client.html -w '%{http_code}' "$CLIENT_URL")"
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "Client updater returned HTTP $HTTP_CODE"
+            echo "Website Manager returned HTTP $HTTP_CODE"
             cat /tmp/treevolution-client.html
             exit 1
           fi
-          if grep -q 'Client updater is not configured yet' /tmp/treevolution-client.html; then
-            echo 'Client updater configuration was not found by the live PHP application.'
+          if grep -q 'Website Manager is not configured yet' /tmp/treevolution-client.html; then
+            echo 'Website Manager configuration was not found by the live PHP application.'
             exit 1
           fi
           grep -q 'Welcome back' /tmp/treevolution-client.html
           grep -q 'Sign in' /tmp/treevolution-client.html
-          echo "Deployment and client updater smoke tests passed."
+          echo "Deployment and Website Manager smoke tests passed."

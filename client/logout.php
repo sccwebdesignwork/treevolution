@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../client-update/bootstrap.php';
+require __DIR__ . '/bootstrap.php';
 $_SESSION = [];
 if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();

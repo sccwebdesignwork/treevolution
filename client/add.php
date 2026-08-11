@@ -1,21 +1,21 @@
 <?php require __DIR__ . '/bootstrap.php'; auth_required(); ?><!doctype html>
 <html lang="en-GB">
 <head>
-<link rel="icon" href="../assets/icons/favicon.ico" sizes="any">
+<link rel="icon" href="../favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
 
 <meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#082a1c">
-<link rel="stylesheet" href="../assets/css/treevolution-v6-4.css">
-<link rel="stylesheet" href="../assets/css/client-update.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/client-editor.css">
 <title>Add website update | Treevolution</title>
 </head>
 <body class="client-admin">
 <header class="client-header"><div class="client-shell client-header-inner">
 <a class="client-brand" href="../" aria-label="Treevolution website"><img src="../assets/branding/treevolution-logo.svg" alt="Treevolution"></a>
-<div class="client-header-actions"><a class="client-signout" href="../client/index.php">Dashboard</a><span class="client-area-label">Client update area</span><a class="client-signout" href="manage.php">Manage updates</a><a class="client-signout" href="logout.php">Sign out</a></div>
+<div class="client-header-actions"><a class="client-signout" href="index.php">Dashboard</a><span class="client-area-label">Website content</span><a class="client-signout" href="manage.php">Manage updates</a><a class="client-signout" href="logout.php">Sign out</a></div>
 </div></header>
 <main class="client-shell client-main">
 <section class="client-page-heading">

@@ -1,83 +1,89 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from urllib.parse import urlsplit
+import hashlib
 import re
 import sys
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
-public_html = [p for p in ROOT.rglob("*.html") if "client-update" not in p.parts]
 
-attr_re = re.compile(r'(?:href|src|poster)=["\']([^"\'#]+)["\']', re.I)
+# Repository cleanliness is a release gate, not just a preference.
+allowed_root_files = {
+    '.gitignore', '.htaccess', '404.html', 'README.md', 'favicon.ico',
+    'index.html', 'robots.txt', 'site.webmanifest', 'sitemap.xml'
+}
+allowed_root_dirs = {
+    '.github', 'about', 'accessibility', 'areas', 'assets', 'client', 'contact',
+    'content', 'cookies', 'our-work', 'privacy', 'reviews', 'services', 'terms', 'tools'
+}
+for p in ROOT.iterdir():
+    if p.is_file() and p.name not in allowed_root_files:
+        errors.append(f'unexpected root file: {p.name}')
+    elif p.is_dir() and p.name not in allowed_root_dirs and p.name != '.git':
+        errors.append(f'unexpected root directory: {p.name}')
+
+for forbidden in ['client-update', 'assets/video', 'assets/img/v7']:
+    if (ROOT / forbidden).exists():
+        errors.append(f'legacy path must not exist: {forbidden}')
+
+runtime_files = [p for p in ROOT.rglob('*') if p.is_file() and p.suffix.lower() in {'.html','.php','.css','.js','.xml','.json','.webmanifest'}]
+for p in runtime_files:
+    text = p.read_text(encoding='utf-8', errors='ignore')
+    for marker in ['treevolution-v6-', 'treevolution-v7', 'client-update/', 'assets/img/v7/']:
+        if marker in text:
+            errors.append(f'{p.relative_to(ROOT)}: legacy runtime reference {marker}')
+
+public_html = [p for p in ROOT.rglob('*.html') if 'client' not in p.parts]
+attr_re = re.compile(r'(?:href|src|poster|action)=["\']([^"\'#]+)["\']', re.I)
 srcset_re = re.compile(r'srcset=["\']([^"\']+)["\']', re.I)
 
 for page in public_html:
-    text = page.read_text(encoding="utf-8")
-    h1_count = len(re.findall(r"<h1\b", text, re.I))
+    text = page.read_text(encoding='utf-8')
+    h1_count = len(re.findall(r'<h1\b', text, re.I))
     if h1_count != 1:
-        errors.append(f"{page.relative_to(ROOT)}: expected 1 H1, found {h1_count}")
+        errors.append(f'{page.relative_to(ROOT)}: expected 1 H1, found {h1_count}')
     if 'name="robots" content="noindex,nofollow,noarchive"' not in text:
-        errors.append(f"{page.relative_to(ROOT)}: staging noindex meta missing")
-    if "assets/css/site.css" in text or "assets/js/site.js" in text or "treevolution-v6-2" in text or "treevolution-v6-3" in text:
-        errors.append(f"{page.relative_to(ROOT)}: stale pre-V6.4/legacy asset reference")
-
+        errors.append(f'{page.relative_to(ROOT)}: staging noindex meta missing')
     vals = attr_re.findall(text)
     for group in srcset_re.findall(text):
-        vals.extend(item.strip().split()[0] for item in group.split(","))
+        vals.extend(item.strip().split()[0] for item in group.split(','))
     for val in vals:
-        if val.startswith(("http://","https://","mailto:","tel:","data:","javascript:")):
+        if val.startswith(('http://','https://','mailto:','tel:','data:','javascript:')):
             continue
         clean = urlsplit(val).path
         target = (page.parent / clean).resolve()
-        if clean.endswith("/"):
-            target = target / "index.html"
+        if clean.endswith('/'):
+            target = target / 'index.html'
         if not target.exists():
-            errors.append(f"{page.relative_to(ROOT)}: missing local reference {val}")
+            errors.append(f'{page.relative_to(ROOT)}: missing local reference {val}')
 
-for img in (ROOT / "assets/img").iterdir():
-    if img.suffix.lower() not in {".webp",".jpg",".jpeg",".png"}:
+# Validate every committed image, including curated site images and client uploads.
+image_files = []
+for base in [ROOT/'assets', ROOT/'content/uploads']:
+    if not base.exists():
         continue
+    image_files += [p for p in base.rglob('*') if p.is_file() and p.suffix.lower() in {'.webp','.jpg','.jpeg','.png','.ico'}]
+for img in image_files:
     try:
         with Image.open(img) as im:
             im.verify()
     except Exception as exc:
-        errors.append(f"{img.relative_to(ROOT)}: unreadable image ({exc})")
+        errors.append(f'{img.relative_to(ROOT)}: unreadable image ({exc})')
 
-contracts = {
-    "treevolution-pollarding-project-upright-1080.webp": "portrait",
-    "treevolution-pollarding-project-upright-720.webp": "portrait",
-    "treevolution-van-sussex-1920.webp": "landscape",
-    "treevolution-van-sussex-1440.webp": "landscape",
-    "treevolution-hedge-cutting-clean-sussex.webp": "landscape",
-    "tree-reduction-project.webp": "landscape",
-}
-for name, expected in contracts.items():
-    path = ROOT / "assets/img" / name
-    if not path.exists():
-        errors.append(f"orientation contract missing asset: {name}")
-        continue
-    with Image.open(path) as im:
-        w, h = im.size
-    actual = "portrait" if h > w else "landscape" if w > h else "square"
-    if actual != expected:
-        errors.append(f"{name}: expected {expected}, got {w}x{h} ({actual})")
-
-for forbidden in [
-    "treevolution-pollarding-project-1440.webp",
-    "treevolution-pollarding-project-960.webp",
-    "treevolution-hedge-cutting-project-1170.webp",
-    "treevolution-hedge-cutting-project-960.webp",
-    "treevolution-hedge-cutting-project-640.webp",
-    "treevolution-team-tree-removal-sussex-1440.webp",
-]:
-    if (ROOT / "assets/img" / forbidden).exists():
-        errors.append(f"forbidden legacy asset still present: {forbidden}")
+# Exact duplicate media waste should not re-enter the repository.
+hashes = {}
+for img in image_files:
+    digest = hashlib.sha256(img.read_bytes()).hexdigest()
+    if digest in hashes:
+        errors.append(f'duplicate media: {img.relative_to(ROOT)} duplicates {hashes[digest]}')
+    else:
+        hashes[digest] = img.relative_to(ROOT)
 
 if errors:
-    print("AUDIT FAILED")
+    print('AUDIT FAILED')
     for err in errors:
-        print(" -", err)
+        print(' -', err)
     sys.exit(1)
-
-print(f"AUDIT PASSED: {len(public_html)} public HTML pages; links, staging noindex, image decoding and orientation contracts validated.")
+print(f'AUDIT PASSED: clean repository; {len(public_html)} public HTML pages; local links and {len(image_files)} media files validated.')

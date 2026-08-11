@@ -3,12 +3,12 @@ require __DIR__ . '/bootstrap.php';
 auth_required();
 [$storiesFile, $stories] = gh_get_json_file('content/stories.json');
 ?><!doctype html><html lang="en-GB"><head>
-<link rel="icon" href="../assets/icons/favicon.ico" sizes="any">
+<link rel="icon" href="../favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
-<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#082a1c"><link rel="stylesheet" href="../assets/css/treevolution-v6-4.css"><link rel="stylesheet" href="../assets/css/client-update.css"><title>Manage website updates | Treevolution</title></head><body class="client-admin">
-<header class="client-header"><div class="client-shell client-header-inner"><a class="client-brand" href="../"><img src="../assets/branding/treevolution-logo.svg" alt="Treevolution"></a><div class="client-header-actions"><a class="client-signout" href="../client/index.php">Dashboard</a><a class="client-signout" href="index.php">Add update</a><a class="client-signout" href="logout.php">Sign out</a></div></div></header>
+<meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#082a1c"><link rel="stylesheet" href="../assets/css/site.css"><link rel="stylesheet" href="../assets/css/client-editor.css"><title>Manage website updates | Treevolution</title></head><body class="client-admin">
+<header class="client-header"><div class="client-shell client-header-inner"><a class="client-brand" href="../"><img src="../assets/branding/treevolution-logo.svg" alt="Treevolution"></a><div class="client-header-actions"><a class="client-signout" href="index.php">Dashboard</a><a class="client-signout" href="add.php">Add update</a><a class="client-signout" href="logout.php">Sign out</a></div></div></header>
 <main class="client-shell client-main"><section class="client-page-heading"><div><p class="client-kicker">Website updates</p><h1>Manage published jobs</h1><p class="client-lead">Edit wording, location and photographs, or remove a post you no longer want shown.</p></div></section>
 <section class="client-panel"><div class="client-manage-list">
 <?php if (!$stories): ?><p>No client updates have been published yet.</p><?php endif; ?>

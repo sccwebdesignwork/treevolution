@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../client-update/bootstrap.php';
+require __DIR__ . '/bootstrap.php';
 if (!empty($_SESSION['treevolution_admin'])) { header('Location: index.php'); exit; }
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,12 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#082a1c">
 <title>Client login | Treevolution Website Manager</title>
-<link rel="icon" href="../assets/icons/favicon.ico" sizes="any">
+<link rel="icon" href="../favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="../assets/css/treevolution-v7.css">
+<link rel="manifest" href="../site.webmanifest">
+<link rel="stylesheet" href="../assets/css/site.css">
 <link rel="stylesheet" href="../assets/css/client-portal.css">
 </head>
 <body class="portal-body portal-login-page">
