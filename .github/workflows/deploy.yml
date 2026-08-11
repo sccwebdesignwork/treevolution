@@ -189,13 +189,29 @@ jobs:
           SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
           RSYNC_SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
 
-          $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$TARGET_DIR' '$TARGET_DIR/client'"
+          # Keep the server as clean as the repository: remove the retired updater first.
+          $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$TARGET_DIR' '$TARGET_DIR/client' && rm -rf '$TARGET_DIR/client-update'"
 
-          rsync -az --delete             --exclude '.git/'             --exclude '.github/'             --exclude '.gitignore'             --exclude 'tools/'             --exclude 'README.md'             --exclude 'client/config.example.php'             --exclude 'client/.treevolution-config.php'             -e "$RSYNC_SSH"             ./ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.gitignore' \
+            --exclude 'tools/' \
+            --exclude 'README.md' \
+            --exclude 'client/config.example.php' \
+            --exclude 'client/.treevolution-config.php' \
+            -e "$RSYNC_SSH" \
+            ./ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
 
-          sshpass -e scp -P "$SSH_PORT" -o BatchMode=no             /tmp/treevolution-private-config.php             "$SSH_USER@$SSH_HOST:$TARGET_DIR/client/.treevolution-config.php"
+          sshpass -e scp -P "$SSH_PORT" -o BatchMode=no \
+            /tmp/treevolution-private-config.php \
+            "$SSH_USER@$SSH_HOST:$TARGET_DIR/client/.treevolution-config.php"
 
-          $SSH "$SSH_USER@$SSH_HOST"             "chmod 600 '$TARGET_DIR/client/.treevolution-config.php' && find '$TARGET_DIR' -type d -exec chmod 755 {} \; && find '$TARGET_DIR' -type f ! -name '.treevolution-config.php' -exec chmod 644 {} \;"
+          $SSH "$SSH_USER@$SSH_HOST" \
+            "chmod 600 '$TARGET_DIR/client/.treevolution-config.php' && \
+             find '$TARGET_DIR' -type d -exec chmod 755 {} \; && \
+             find '$TARGET_DIR' -type f ! -name '.treevolution-config.php' -exec chmod 644 {} \; && \
+             test ! -e '$TARGET_DIR/client-update'"
 
       - name: Verify Website Manager private config on server
         shell: bash
@@ -205,18 +221,16 @@ jobs:
           SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
           CONFIG="$TARGET_DIR/client/.treevolution-config.php"
 
-          # Keep this deliberately simple: nested PHP quoting over SSH is fragile.
-          # The live HTTP smoke test below is the authoritative end-to-end check.
           $SSH "$SSH_USER@$SSH_HOST" \
             "test -d '$TARGET_DIR/client' && \
              test -s '$CONFIG' && \
              test -r '$CONFIG' && \
-             grep -q "'upload_username'" '$CONFIG' && \
-             grep -q "'upload_password'" '$CONFIG' && \
-             grep -q "'github_owner'" '$CONFIG' && \
-             grep -q "'github_repo'" '$CONFIG' && \
-             grep -q "'github_branch'" '$CONFIG' && \
-             grep -q "'github_token'" '$CONFIG'"
+             grep -q \"'upload_username'\" '$CONFIG' && \
+             grep -q \"'upload_password'\" '$CONFIG' && \
+             grep -q \"'github_owner'\" '$CONFIG' && \
+             grep -q \"'github_repo'\" '$CONFIG' && \
+             grep -q \"'github_branch'\" '$CONFIG' && \
+             grep -q \"'github_token'\" '$CONFIG'"
 
           echo "Website Manager private config exists, is non-empty, and contains all required keys."
 
@@ -231,7 +245,8 @@ jobs:
 
           echo "Checking $URL"
           curl --fail --silent --show-error --location --retry 3 --retry-delay 3 "$URL" > /tmp/treevolution-home.html
-          grep -q '<title>Tree Surgeon Lewes & Sussex | Treevolution Professional Tree Care</title>' /tmp/treevolution-home.html
+          grep -Fq 'Tree Surgeons Lewes &amp; Sussex' /tmp/treevolution-home.html
+          grep -Fq 'Treevolution Professional Tree Care' /tmp/treevolution-home.html
           curl --fail --silent --show-error --location "${URL%/}/privacy/" >/dev/null
 
           echo "Checking Website Manager at $CLIENT_URL"
