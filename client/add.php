@@ -8,8 +8,8 @@
 
 <meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#082a1c">
-<link rel="stylesheet" href="../assets/css/site.css">
-<link rel="stylesheet" href="../assets/css/client-editor.css">
+<link rel="stylesheet" href="../assets/css/site.css?v=20260812-0715">
+<link rel="stylesheet" href="../assets/css/client-editor.css?v=20260812-0715">
 <title>Add website update | Treevolution</title>
 </head>
 <body class="client-admin">

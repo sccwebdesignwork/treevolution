@@ -17,8 +17,8 @@ $lookerReady = (bool)preg_match('~^https://lookerstudio\.google\.com/embed/repor
 <link rel="icon" type="image/png" sizes="16x16" href="../assets/icons/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="../site.webmanifest">
-<link rel="stylesheet" href="../assets/css/site.css">
-<link rel="stylesheet" href="../assets/css/client-portal.css">
+<link rel="stylesheet" href="../assets/css/site.css?v=20260812-0715">
+<link rel="stylesheet" href="../assets/css/client-portal.css?v=20260812-0715">
 </head>
 <body class="portal-body">
 <header class="portal-header"><div class="portal-shell portal-header-inner">
