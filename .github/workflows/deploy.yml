@@ -247,7 +247,25 @@ jobs:
           curl --fail --silent --show-error --location --retry 3 --retry-delay 3 "$URL" > /tmp/treevolution-home.html
           grep -Fq 'Tree Surgeons Lewes &amp; Sussex' /tmp/treevolution-home.html
           grep -Fq 'Treevolution Professional Tree Care' /tmp/treevolution-home.html
+          grep -Fq 'site.css?v=20260812-0715' /tmp/treevolution-home.html
           curl --fail --silent --show-error --location "${URL%/}/privacy/" >/dev/null
+
+          echo "Checking deployed responsive stylesheet"
+          CSS_URL="${URL%/}/assets/css/site.css?v=20260812-0715"
+          CSS_TYPE="$(curl --fail --silent --show-error --location -o /tmp/treevolution-site.css -w '%{content_type}' "$CSS_URL")"
+          case "$CSS_TYPE" in
+            text/css*) ;;
+            *) echo "Stylesheet returned unexpected Content-Type: $CSS_TYPE"; exit 1 ;;
+          esac
+          grep -Fq '@media(max-width:650px)' /tmp/treevolution-site.css
+          grep -Fq '.nav-toggle{display:none' /tmp/treevolution-site.css
+
+          echo "Checking retired client-update URL redirects to the Website Manager"
+          LEGACY_FINAL_URL="$(curl --fail --silent --show-error --location -o /dev/null -w '%{url_effective}' "${URL%/}/client-update/login.php")"
+          case "$LEGACY_FINAL_URL" in
+            */client/|*/client/index.php|*/client/login.php) ;;
+            *) echo "Legacy client-update URL did not redirect into /client/: $LEGACY_FINAL_URL"; exit 1 ;;
+          esac
 
           echo "Checking Website Manager at $CLIENT_URL"
           HTTP_CODE="$(curl --silent --show-error --location --retry 3 --retry-delay 3 -o /tmp/treevolution-client.html -w '%{http_code}' "$CLIENT_URL")"
