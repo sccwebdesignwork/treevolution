@@ -1,6 +1,18 @@
 Options -Indexes
 DirectoryIndex index.html index.php
 
+# Compatibility only: retired client updater URLs now use the single Website Manager.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^client-update(?:/.*)?$ /test/client/ [R=302,L,NE]
+</IfModule>
+
+# Explicit MIME types are important because nosniff is enabled.
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js
+</IfModule>
+
 # Never serve the generated Website Manager credentials/token file.
 <Files ".treevolution-config.php">
   <IfModule mod_authz_core.c>
@@ -35,3 +47,4 @@ ErrorDocument 404 /test/404.html
     Header set Expires "0"
   </FilesMatch>
 </IfModule>
+
