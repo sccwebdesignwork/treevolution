@@ -1,4 +1,4 @@
-name: Validate and deploy Treevolution test site
+name: Validate and deploy Treevolution production site
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: treevolution-test-deploy
+  group: treevolution-production-deploy
   cancel-in-progress: true
 
 jobs:
@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           find client contact -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 
-      - name: Validate deployment secrets and staging target
+      - name: Validate deployment secrets and production target
         shell: bash
         run: |
           set -euo pipefail
@@ -84,8 +84,8 @@ jobs:
             fi
           done
           case "$TARGET_DIR" in
-            */test|*/test/) ;;
-            *) echo "Safety stop: staging workflow only deploys to a /test directory. TARGET_DIR=$TARGET_DIR"; exit 1 ;;
+            */domains/treevolution.uk/public_html|*/domains/treevolution.uk/public_html/) ;;
+            *) echo "Safety stop: production workflow only deploys to the Treevolution public_html directory. TARGET_DIR=$TARGET_DIR"; exit 1 ;;
           esac
 
       - name: Run site and media audit
@@ -181,7 +181,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
           echo "SSH host key collected successfully."
 
-      - name: Deploy website to Hostinger test directory
+      - name: Deploy website to Hostinger production directory
         shell: bash
         run: |
           set -euo pipefail
@@ -240,7 +240,7 @@ jobs:
           DEPLOY_URL: ${{ vars.TREEVOLUTION_DEPLOY_URL }}
         run: |
           set -euo pipefail
-          URL="${DEPLOY_URL:-https://treevolution.uk/test/}"
+          URL="${DEPLOY_URL:-https://treevolution.uk/}"
           CLIENT_URL="${URL%/}/client/login.php"
 
           echo "Checking $URL"
