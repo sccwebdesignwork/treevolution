@@ -1,19 +1,16 @@
 Options -Indexes
 DirectoryIndex index.html index.php
 
-# Compatibility only: retired client updater URLs now use the single Website Manager.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^client-update(?:/.*)?$ /test/client/ [R=302,L,NE]
+  RewriteRule ^client-update(?:/.*)?$ /client/ [R=301,L,NE]
 </IfModule>
 
-# Explicit MIME types are important because nosniff is enabled.
 <IfModule mod_mime.c>
   AddType text/css .css
   AddType application/javascript .js
 </IfModule>
 
-# Never serve the generated Website Manager credentials/token file.
 <Files ".treevolution-config.php">
   <IfModule mod_authz_core.c>
     Require all denied
@@ -22,23 +19,24 @@ DirectoryIndex index.html index.php
     Deny from all
   </IfModule>
 </Files>
+
 <IfModule mod_headers.c>
-  Header set X-Robots-Tag "noindex, nofollow, noarchive"
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
   Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
 </IfModule>
+
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType image/webp "access plus 1 year"
   ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
   ExpiresByType image/svg+xml "access plus 1 year"
-  ExpiresByType video/mp4 "access plus 1 month"
-  ExpiresByType video/webm "access plus 1 month"
   ExpiresByType text/css "access plus 0 seconds"
   ExpiresByType application/javascript "access plus 0 seconds"
 </IfModule>
-ErrorDocument 404 /test/404.html
+
+ErrorDocument 404 /404.html
 
 <IfModule mod_headers.c>
   <FilesMatch "\.(?:html|css|js)$">
@@ -47,4 +45,3 @@ ErrorDocument 404 /test/404.html
     Header set Expires "0"
   </FilesMatch>
 </IfModule>
-
