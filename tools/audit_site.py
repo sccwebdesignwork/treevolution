@@ -2,6 +2,7 @@
 from pathlib import Path
 from urllib.parse import urlsplit
 import hashlib
+import os
 import re
 import sys
 from PIL import Image
@@ -9,7 +10,6 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
 
-# Repository cleanliness is a release gate, not just a preference.
 allowed_root_files = {
     '.gitignore', '.htaccess', '404.html', 'README.md', 'favicon.ico',
     'index.html', 'robots.txt', 'site.webmanifest', 'sitemap.xml'
@@ -38,14 +38,21 @@ for p in runtime_files:
 public_html = [p for p in ROOT.rglob('*.html') if 'client' not in p.parts]
 attr_re = re.compile(r'(?:href|src|poster|action)=["\']([^"\'#]+)["\']', re.I)
 srcset_re = re.compile(r'srcset=["\']([^"\']+)["\']', re.I)
+site_mode = os.environ.get('TREEVOLUTION_ENV', 'staging').strip().lower()
 
 for page in public_html:
     text = page.read_text(encoding='utf-8')
     h1_count = len(re.findall(r'<h1\b', text, re.I))
     if h1_count != 1:
         errors.append(f'{page.relative_to(ROOT)}: expected 1 H1, found {h1_count}')
-    if 'name="robots" content="noindex,nofollow,noarchive"' not in text:
+    rel = page.relative_to(ROOT).as_posix()
+    if site_mode == 'production':
+        expected = 'name="robots" content="noindex,follow"' if rel == '404.html' else 'name="robots" content="index,follow"'
+        if expected not in text:
+            errors.append(f'{page.relative_to(ROOT)}: production robots meta incorrect; expected {expected}')
+    elif 'name="robots" content="noindex,nofollow,noarchive"' not in text:
         errors.append(f'{page.relative_to(ROOT)}: staging noindex meta missing')
+
     vals = attr_re.findall(text)
     for group in srcset_re.findall(text):
         vals.extend(item.strip().split()[0] for item in group.split(','))
@@ -59,12 +66,10 @@ for page in public_html:
         if not target.exists():
             errors.append(f'{page.relative_to(ROOT)}: missing local reference {val}')
 
-# Validate every committed image, including curated site images and client uploads.
 image_files = []
 for base in [ROOT/'assets', ROOT/'content/uploads']:
-    if not base.exists():
-        continue
-    image_files += [p for p in base.rglob('*') if p.is_file() and p.suffix.lower() in {'.webp','.jpg','.jpeg','.png','.ico'}]
+    if base.exists():
+        image_files += [p for p in base.rglob('*') if p.is_file() and p.suffix.lower() in {'.webp','.jpg','.jpeg','.png','.ico'}]
 for img in image_files:
     try:
         with Image.open(img) as im:
@@ -72,7 +77,6 @@ for img in image_files:
     except Exception as exc:
         errors.append(f'{img.relative_to(ROOT)}: unreadable image ({exc})')
 
-# Exact duplicate media waste should not re-enter the repository.
 hashes = {}
 for img in image_files:
     digest = hashlib.sha256(img.read_bytes()).hexdigest()
