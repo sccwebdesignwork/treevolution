@@ -37,7 +37,6 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           for page in Path('.').rglob('*.html'):
               if '.git' in page.parts or 'client' in page.parts:
                   continue
@@ -46,21 +45,19 @@ jobs:
               if page.as_posix() == '404.html':
                   text = text.replace('name="robots" content="index,follow"', 'name="robots" content="noindex,follow"')
               page.write_text(text, encoding='utf-8')
-
           generator = Path('client/bootstrap.php')
           if generator.exists():
               text = generator.read_text(encoding='utf-8')
               text = text.replace('name="robots" content="noindex,nofollow,noarchive"', 'name="robots" content="index,follow"')
               generator.write_text(text, encoding='utf-8')
           PY
-
           if ! git diff --quiet -- '*.html' client/bootstrap.php; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -- '*.html' client/bootstrap.php
             git commit -m 'Normalise Treevolution production indexing'
             git push origin HEAD:main
-            echo 'Production indexing source normalised and committed. A fresh deployment run will continue from the clean commit.'
+            echo 'Production indexing source normalised and committed.'
             exit 0
           fi
 
@@ -68,24 +65,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          required=(
-            index.html privacy/index.html cookies/index.html accessibility/index.html terms/index.html
-            about/index.html services/index.html our-work/index.html reviews/index.html areas/index.html contact/index.html
-            404.html robots.txt sitemap.xml .htaccess
-            assets/css/site.css assets/css/client-portal.css assets/css/client-editor.css assets/js/site.js
-            client/login.php client/add.php client/manage.php client/submit.php client/bootstrap.php contact/send.php
-          )
-          for file in "${required[@]}"; do
-            test -f "$file" || { echo "Missing required file: $file"; exit 1; }
-          done
+          required=(index.html privacy/index.html cookies/index.html accessibility/index.html terms/index.html about/index.html services/index.html our-work/index.html reviews/index.html areas/index.html contact/index.html 404.html robots.txt sitemap.xml .htaccess assets/css/site.css assets/css/client-portal.css assets/css/client-editor.css assets/js/site.js client/login.php client/add.php client/manage.php client/submit.php client/bootstrap.php contact/send.php)
+          for file in "${required[@]}"; do test -f "$file" || { echo "Missing required file: $file"; exit 1; }; done
           python3 - <<'PY'
           from pathlib import Path
           import re
-          patterns = [
-              re.compile(('github' + '_pat_') + r'[A-Za-z0-9_]+'),
-              re.compile(('gh' + 'p_') + r'[A-Za-z0-9]+'),
-              re.compile(r'-----BEGIN (?:OPENSSH|RSA|EC|DSA) PRIVATE KEY-----'),
-          ]
+          patterns=[re.compile(('github'+'_pat_')+r'[A-Za-z0-9_]+'),re.compile(('gh'+'p_')+r'[A-Za-z0-9]+'),re.compile(r'-----BEGIN (?:OPENSSH|RSA|EC|DSA) PRIVATE KEY-----')]
           hits=[]
           for path in [p for p in Path('.').rglob('*') if p.is_file() and '.git' not in p.parts]:
               try: text=path.read_text(encoding='utf-8')
@@ -101,13 +86,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in TARGET_DIR SSH_HOST SSH_PORT SSH_USER SSH_PASSWORD UPLOAD_USERNAME UPLOAD_PASSWORD TREEVOLUTION_GITHUB_TOKEN; do
-            [ -n "${!name:-}" ] || { echo "Required secret is missing: $name"; exit 1; }
-          done
-          case "$TARGET_DIR" in
-            */domains/treevolution.uk/public_html|*/domains/treevolution.uk/public_html/) ;;
-            *) echo "Safety stop: production workflow only deploys to the Treevolution public_html directory."; exit 1 ;;
-          esac
+          for name in TARGET_DIR SSH_HOST SSH_PORT SSH_USER SSH_PASSWORD UPLOAD_USERNAME UPLOAD_PASSWORD TREEVOLUTION_GITHUB_TOKEN; do [ -n "${!name:-}" ] || { echo "Required secret is missing: $name"; exit 1; }; done
+          case "$TARGET_DIR" in */domains/treevolution.uk/public_html|*/domains/treevolution.uk/public_html/) ;; *) echo "Safety stop: production workflow only deploys to the Treevolution public_html directory."; exit 1 ;; esac
 
       - name: Run site and media audit
         shell: bash
@@ -131,18 +111,9 @@ jobs:
           import os
           from pathlib import Path
           owner, repo = os.environ['REPOSITORY'].split('/',1)
-          values={
-            'upload_username':os.environ['UPLOAD_USERNAME'],
-            'upload_password':os.environ['UPLOAD_PASSWORD'],
-            'github_owner':owner,
-            'github_repo':repo,
-            'github_branch':'main',
-            'github_token':os.environ['TREEVOLUTION_GITHUB_TOKEN'],
-          }
+          values={'upload_username':os.environ['UPLOAD_USERNAME'],'upload_password':os.environ['UPLOAD_PASSWORD'],'github_owner':owner,'github_repo':repo,'github_branch':'main','github_token':os.environ['TREEVOLUTION_GITHUB_TOKEN']}
           def q(v): return "'"+v.replace('\\','\\\\').replace("'","\\'")+"'"
-          lines=['<?php','// Generated by GitHub Actions. Never commit this file.','return [']
-          lines += [f'  {q(k)} => {q(v)},' for k,v in values.items()]
-          lines += ['];']
+          lines=['<?php','// Generated by GitHub Actions. Never commit this file.','return [']+[f'  {q(k)} => {q(v)},' for k,v in values.items()]+['];']
           Path('/tmp/treevolution-private-config.php').write_text('\n'.join(lines)+'\n',encoding='utf-8')
           PY
           chmod 600 /tmp/treevolution-private-config.php
@@ -155,11 +126,7 @@ jobs:
           : > ~/.ssh/known_hosts
           ok=0
           for attempt in 1 2 3; do
-            if timeout 40 ssh-keyscan -T 30 -p "$SSH_PORT" -H "$SSH_HOST" > /tmp/treevolution-known-hosts 2>/dev/null && [ -s /tmp/treevolution-known-hosts ]; then
-              cat /tmp/treevolution-known-hosts >> ~/.ssh/known_hosts
-              ok=1
-              break
-            fi
+            if timeout 40 ssh-keyscan -T 30 -p "$SSH_PORT" -H "$SSH_HOST" > /tmp/treevolution-known-hosts 2>/dev/null && [ -s /tmp/treevolution-known-hosts ]; then cat /tmp/treevolution-known-hosts >> ~/.ssh/known_hosts; ok=1; break; fi
             sleep 5
           done
           [ "$ok" -eq 1 ] || { echo 'Unable to obtain Hostinger SSH host key.'; exit 1; }
@@ -170,15 +137,16 @@ jobs:
         run: |
           set -euo pipefail
           export SSHPASS="$SSH_PASSWORD"
-          SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
-          RSYNC_SSH="sshpass -e ssh -p $SSH_PORT -o BatchMode=no"
+          AUTH_OPTS="-o BatchMode=no -o PreferredAuthentications=password,keyboard-interactive -o PubkeyAuthentication=no -o PasswordAuthentication=yes -o KbdInteractiveAuthentication=yes -o NumberOfPasswordPrompts=1"
+          SSH="sshpass -e ssh -p $SSH_PORT $AUTH_OPTS"
+          RSYNC_SSH="sshpass -e ssh -p $SSH_PORT $AUTH_OPTS"
           $SSH "$SSH_USER@$SSH_HOST" "mkdir -p '$TARGET_DIR' '$TARGET_DIR/client' && rm -rf '$TARGET_DIR/client-update'"
           rsync -az --delete \
             --exclude '.git/' --exclude '.github/' --exclude '.gitignore' --exclude 'tools/' --exclude 'README.md' \
             --exclude 'client/config.example.php' --exclude 'client/.treevolution-config.php' \
             -e "$RSYNC_SSH" ./ "$SSH_USER@$SSH_HOST:$TARGET_DIR/"
-          sshpass -e scp -P "$SSH_PORT" -o BatchMode=no /tmp/treevolution-private-config.php "$SSH_USER@$SSH_HOST:$TARGET_DIR/client/.treevolution-config.php"
-          $SSH "$SSH_USER@$SSH_HOST" "chmod 600 '$TARGET_DIR/client/.treevolution-config.php' && find '$TARGET_DIR' -type d -exec chmod 755 {} \; && find '$TARGET_DIR' -type f ! -name '.treevolution-config.php' -exec chmod 644 {} \;"
+          sshpass -e scp -P "$SSH_PORT" $AUTH_OPTS /tmp/treevolution-private-config.php "$SSH_USER@$SSH_HOST:$TARGET_DIR/client/.treevolution-config.php"
+          $SSH "$SSH_USER@$SSH_HOST" "chmod 600 '$TARGET_DIR/client/.treevolution-config.php' && find '$TARGET_DIR' -type d -exec chmod 755 {} \\; && find '$TARGET_DIR' -type f ! -name '.treevolution-config.php' -exec chmod 644 {} \\;"
 
       - name: Smoke test production site
         shell: bash
@@ -192,8 +160,5 @@ jobs:
           curl --fail --silent --show-error --location "${URL%/}/our-work/projects/2026-04-08-ash-dieback-removal-lewes/" > /tmp/project.html
           grep -Fq 'Ash dieback removal in Lewes' /tmp/project.html
           curl --fail --silent --show-error --location "${URL%/}/client/login.php" > /tmp/client.html
-          if grep -q 'Website Manager is not configured yet' /tmp/client.html; then
-            echo 'Website Manager configuration was not found by the live PHP application.'
-            exit 1
-          fi
+          if grep -q 'Website Manager is not configured yet' /tmp/client.html; then echo 'Website Manager configuration was not found by the live PHP application.'; exit 1; fi
           echo 'Treevolution production deployment smoke tests passed.'
